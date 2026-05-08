@@ -43,13 +43,6 @@ const PROVIDERS: Provider[] = [
     docsUrl: "https://platform.openai.com/api-keys",
   },
   {
-    name: "Anthropic",
-    endpoint: "https://api.anthropic.com/v1",
-    model: "claude-sonnet-4-5",
-    placeholder: "sk-ant-...",
-    docsUrl: "https://console.anthropic.com/keys",
-  },
-  {
     name: "Ollama (Local)",
     endpoint: "http://localhost:11434/v1",
     model: "llama3.2",

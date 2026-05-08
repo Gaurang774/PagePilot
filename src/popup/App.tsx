@@ -87,7 +87,7 @@ export default function App() {
       }
       pageData = scanRes.pageData;
 
-      set({ scanStep: "Analyzing with Claude AI…", scanProgress: 70, pageData });
+      set({ scanStep: "Analyzing with AI…", scanProgress: 70, pageData });
 
       // Get insights from background
       const insightRes = await chrome.runtime.sendMessage({

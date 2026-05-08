@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "PagePilot",
   "version": "1.0.0",
-  "description": "Your AI co-pilot for every webpage. Scan any page and ask questions powered by Claude AI.",
+  "description": "Your AI co-pilot for every webpage. Scan any page and ask questions powered by AI.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
