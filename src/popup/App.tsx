@@ -41,8 +41,9 @@ export default function App() {
 
   // Check for API key on mount
   useEffect(() => {
-    chrome.storage.local.get(["apiKey"], (result) => {
-      set({ hasApiKey: !!result.apiKey });
+    chrome.storage.local.get(["apiKey", "apiEndpoint"], (result) => {
+      const isLocal = result.apiEndpoint && (result.apiEndpoint.includes("localhost") || result.apiEndpoint.includes("127.0.0.1"));
+      set({ hasApiKey: !!result.apiKey || isLocal });
     });
   }, [set]);
 
