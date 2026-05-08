@@ -18,12 +18,12 @@ function sanitizeLatin1(str: string): string {
 async function getApiConfig(): Promise<ApiConfig | null> {
   return new Promise((resolve) => {
     chrome.storage.local.get(["apiKey", "apiEndpoint", "modelName"], (result) => {
-      if (!result.apiKey || !result.apiEndpoint || !result.modelName) {
+      if (!result.apiEndpoint || !result.modelName) {
         resolve(null);
         return;
       }
       resolve({
-        apiKey: sanitizeLatin1(result.apiKey),
+        apiKey: result.apiKey ? sanitizeLatin1(result.apiKey) : "",
         endpoint: result.apiEndpoint,
         model: result.modelName,
       });
@@ -66,8 +66,10 @@ ${linksSample || "None"}
 async function callAI(config: ApiConfig, systemPrompt: string, userMessage: string): Promise<string> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${config.apiKey}`,
   };
+  if (config.apiKey) {
+    headers["Authorization"] = `Bearer ${config.apiKey}`;
+  }
   // OpenRouter requires these headers
   if (config.endpoint.includes("openrouter.ai")) {
     headers["HTTP-Referer"] = "https://pagepilot.extension";
@@ -157,8 +159,10 @@ ${pageContext}`;
   try {
     const streamHeaders: Record<string, string> = {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${config.apiKey}`,
     };
+    if (config.apiKey) {
+      streamHeaders["Authorization"] = `Bearer ${config.apiKey}`;
+    }
     if (config.endpoint.includes("openrouter.ai")) {
       streamHeaders["HTTP-Referer"] = "https://pagepilot.extension";
       streamHeaders["X-Title"] = "PagePilot";

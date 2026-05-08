@@ -97,8 +97,9 @@ export default function ApiKeyModal({ onSave, onClose }: Props) {
     const trimmedKey = key.trim();
     const trimmedEndpoint = endpoint.trim();
     const trimmedModel = model.trim();
+    const isLocal = trimmedEndpoint.includes("localhost") || trimmedEndpoint.includes("127.0.0.1");
 
-    if (!trimmedKey) { setError("Please enter an API key."); return; }
+    if (!trimmedKey && !isLocal) { setError("Please enter an API key."); return; }
     if (!trimmedEndpoint) { setError("Please enter an endpoint URL."); return; }
     if (!trimmedModel) { setError("Please enter a model name."); return; }
 
