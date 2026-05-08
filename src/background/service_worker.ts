@@ -55,7 +55,7 @@ Internal Links: ${pageData.internalLinkCount} | External Links: ${pageData.exter
 ${headingsList || "None"}
 
 === MAIN CONTENT ===
-${pageData.bodyText}
+${pageData.bodyText.slice(0, 6000)}
 
 === LINKS SAMPLE ===
 ${linksSample || "None"}
@@ -80,6 +80,7 @@ async function callAI(config: ApiConfig, systemPrompt: string, userMessage: stri
   const body = JSON.stringify({
     model: config.model,
     max_tokens: 512,
+    stream: false,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userMessage },
@@ -90,7 +91,17 @@ async function callAI(config: ApiConfig, systemPrompt: string, userMessage: stri
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     console.log(`[PagePilot] Fetching insights from: ${url} (attempt ${attempt + 1})`);
     
-    const response = await fetch(url, { method: "POST", headers, body });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
+    let response;
+    try {
+      response = await fetch(url, { method: "POST", headers, body, signal: controller.signal });
+    } catch (e) {
+      clearTimeout(timeoutId);
+      throw new Error(`Connection failed or timed out: ${String(e)}`);
+    }
+    clearTimeout(timeoutId);
 
     if (response.ok) {
       const data = await response.json() as {
@@ -103,6 +114,11 @@ async function callAI(config: ApiConfig, systemPrompt: string, userMessage: stri
       // Parse retry-after or use exponential backoff
       const retryAfter = response.headers.get("retry-after");
       const waitMs = retryAfter ? parseFloat(retryAfter) * 1000 : (2 ** attempt) * 2000;
+      
+      if (waitMs > 10000) {
+        throw new Error(`Rate limit exceeded (429). Please try again in ${Math.round(waitMs / 1000)} seconds.`);
+      }
+
       console.log(`[PagePilot] Rate limited (429). Retrying in ${waitMs}ms…`);
       await new Promise((r) => setTimeout(r, waitMs));
       continue;
@@ -130,9 +146,21 @@ Return ONLY the raw JSON, no markdown, no explanation.`;
 
   const raw = await callAI(config, systemPrompt, `Analyze this webpage:\n\n${pageContext}`);
 
-  // Strip markdown code fences if model wraps in ```json
-  const cleaned = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
-  return JSON.parse(cleaned) as Insights;
+  // Extract JSON object if model is chatty or wraps in markdown
+  try {
+    const match = raw.match(/\{[\s\S]*\}/);
+    const cleaned = match ? match[0] : raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+    return JSON.parse(cleaned) as Insights;
+  } catch (error) {
+    console.warn("[PagePilot] AI returned invalid JSON. Using fallback. Raw response:", raw);
+    return {
+      summary: "Could not generate summary. The AI model returned an invalid or unsupported format.",
+      keyTopics: ["Parsing Error"],
+      sentiment: "neutral",
+      sentimentScore: 50,
+      pageType: "other"
+    };
+  }
 }
 
 // Streaming chat via long-lived port
@@ -250,6 +278,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       } catch (err) {
         sendResponse({ success: false, error: String(err) });
       }
+    }).catch((err) => {
+      sendResponse({ success: false, error: `Unexpected error: ${String(err)}` });
     });
     return true;
   }
