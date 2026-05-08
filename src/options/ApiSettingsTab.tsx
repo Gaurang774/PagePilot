@@ -106,25 +106,33 @@ export default function ApiSettingsTab() {
     try {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${trimmedKey}`,
       };
+      if (trimmedKey) {
+        headers["Authorization"] = `Bearer ${trimmedKey}`;
+      }
       if (trimmedEndpoint.includes("openrouter.ai")) {
         headers["HTTP-Referer"] = "https://pagepilot.extension";
         headers["X-Title"] = "PagePilot";
       }
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
       const url = `${trimmedEndpoint}/chat/completions`;
       const response = await fetch(url, {
         method: "POST",
         headers,
+        signal: controller.signal,
         body: JSON.stringify({
           model: trimmedModel,
           max_tokens: 5,
+          stream: false,
           messages: [
             { role: "user", content: "Say hi" },
           ],
         }),
       });
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errBody = await response.text();
